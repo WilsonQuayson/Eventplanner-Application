@@ -1,6 +1,6 @@
 # Eventplanner-Application 🗓️
 
-A portfolio-grade backend API for planning and managing events. Built with **ASP.NET Core Web API**, this project supports secure user authentication, authorization, and basic event CRUD operations. A **Next.js frontend** will be added in the future.
+A backend API for planning and managing events. Built with **ASP.NET Core Web API**, this project supports secure user authentication, authorization, and basic event CRUD operations. A **Next.js frontend** will be added in the future.
 
 ---
 
