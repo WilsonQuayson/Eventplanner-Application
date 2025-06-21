@@ -7,6 +7,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Migrations\20250611155306_InitialDb.Designer.cs" />
+    <Compile Remove="Migrations\20250611161212_AddSeedData.Designer.cs" />
+    <Compile Remove="Migrations\20250611163224_SetStartTimeDateOnly.Designer.cs" />
+    <Compile Remove="Migrations\EventDbContextModelSnapshot.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Migrations\20250611155306_InitialDb.Designer.cs" />
+    <None Include="Migrations\20250611161212_AddSeedData.Designer.cs" />
+    <None Include="Migrations\20250611163224_SetStartTimeDateOnly.Designer.cs" />
+    <None Include="Migrations\EventDbContextModelSnapshot.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.17" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.17" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.17">

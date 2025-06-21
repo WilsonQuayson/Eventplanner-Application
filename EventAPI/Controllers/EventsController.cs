@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using EventAPI.Data;
 using EventAPI.Models;
 using Microsoft.AspNetCore.Authorization;
+using EventAPI.Authentication;
 
 namespace EventAPI.Controllers
 {
@@ -16,46 +17,91 @@ namespace EventAPI.Controllers
     [ApiController]
     public class EventsController : ControllerBase
     {
-        private readonly EventDbContext _context;
+        private readonly AppDbContext _context;
 
-        public EventsController(EventDbContext context)
+        public EventsController(AppDbContext context)
         {
             _context = context;
         }
 
         // GET: api/Events
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Event>>> GetEvents()
+        public async Task<ActionResult<IEnumerable<EventDTO>>> GetEvents()
         {
-            return await _context.Events.ToListAsync();
+            return await _context.Events
+                .Select(e => new EventDTO
+                {
+                    Id = e.Id,
+                    Title = e.Title,
+                    Description = e.Description,
+                    StartTime = e.StartTime,
+                    UserId = e.UserId
+                })
+                .ToListAsync();
         }
 
-        // GET: api/Events/5
+        // GET: api/Events/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Event>> GetEvent(Guid id)
+        public async Task<ActionResult<EventDTO>> GetEvent(Guid id)
         {
-            var @event = await _context.Events.FindAsync(id);
+            var eventEntity = await _context.Events
+                .Include(e => e.User) // Eager Loading
+                .FirstOrDefaultAsync(e => e.Id == id);
 
-            if (@event == null)
+            if (eventEntity == null)
             {
                 return NotFound();
             }
 
-            return @event;
+            var eventDTO = new EventDTO
+            {
+                Id = eventEntity.Id,
+                Title = eventEntity.Title,
+                Description = eventEntity.Description,
+                StartTime = eventEntity.StartTime,
+                UserId = eventEntity.UserId,
+                User = eventEntity.User == null ? null : new UserDTO
+                {
+                    Id = eventEntity.User.Id,
+                    UserName = eventEntity.User.UserName,
+                    Email = eventEntity.User.Email
+                }
+            };
+
+            return Ok(eventDTO);
         }
 
-        // PUT: api/Events/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutEvent(Guid id, Event @event)
+        public async Task<IActionResult> PutEvent(Guid id, EventDTO eventDTO)
         {
-            if (id != @event.Id)
+            if (id != eventDTO.Id)
             {
-                return BadRequest();
+                return BadRequest("Event ID in the URL does not match the ID in the body.");
             }
 
-            _context.Entry(@event).State = EntityState.Modified;
+            // Fetch the existing event from the database
+            var eventEntity = await _context.Events.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == id);
 
+            if (eventEntity == null)
+            {
+                return NotFound($"Event with ID '{id}' not found.");
+            }
+
+            // Fetch the user from the database using the UserId provided in the DTO
+            var user = await _context.Users.FindAsync(eventDTO.UserId);
+            if (user == null)
+            {
+                return BadRequest($"User with ID '{eventDTO.UserId}' does not exist.");
+            }
+
+            // Update the event properties
+            eventEntity.Title = eventDTO.Title;
+            eventEntity.Description = eventDTO.Description;
+            eventEntity.StartTime = eventDTO.StartTime;
+            eventEntity.UserId = eventDTO.UserId; // Update the foreign key
+            eventEntity.User = user;             // Update the navigation property
+
+            // Save changes to the database
             try
             {
                 await _context.SaveChangesAsync();
@@ -75,33 +121,59 @@ namespace EventAPI.Controllers
             return NoContent();
         }
 
-        // POST: api/Events
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+
+
         [HttpPost]
-        public async Task<ActionResult<Event>> PostEvent(Event @event)
+        public async Task<ActionResult<EventDTO>> PostEvent(EventDTO eventDTO)
         {
-            _context.Events.Add(@event);
+            // Fetch the user from the database using the UserId provided in the DTO
+            var user = await _context.Users.FindAsync(eventDTO.UserId);
+
+            if (user == null)
+            {
+                return BadRequest($"User with ID '{eventDTO.UserId}' does not exist.");
+            }
+
+            // Create a new Event entity and assign the fetched user to the User property
+            var eventEntity = new Event
+            {
+                Id = Guid.NewGuid(),
+                Title = eventDTO.Title,
+                Description = eventDTO.Description,
+                StartTime = eventDTO.StartTime,
+                UserId = eventDTO.UserId, // Foreign key
+                User = user               // Navigation property
+            };
+
+            // Add the event to the database
+            _context.Events.Add(eventEntity);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetEvent", new { id = @event.Id }, @event);
+            // Return the created event as a DTO
+            return CreatedAtAction(nameof(GetEvent), new { id = eventEntity.Id }, eventDTO);
         }
 
-        // DELETE: api/Events/5
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEvent(Guid id)
         {
-            var @event = await _context.Events.FindAsync(id);
-            if (@event == null)
+            // Fetch the event from the database
+            var eventEntity = await _context.Events.FindAsync(id);
+
+            if (eventEntity == null)
             {
-                return NotFound();
+                return NotFound($"Event with ID '{id}' not found.");
             }
 
-            _context.Events.Remove(@event);
+            // Remove the event
+            _context.Events.Remove(eventEntity);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
+        // Helper method to check if an event exists
         private bool EventExists(Guid id)
         {
             return _context.Events.Any(e => e.Id == id);

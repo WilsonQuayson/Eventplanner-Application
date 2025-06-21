@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Configuration;
 using System.Text;
 
 namespace EventAPI
@@ -18,12 +17,12 @@ namespace EventAPI
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddDbContext<EventDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
             builder.Services.AddControllers();
 
             //Auth
-            builder.Services.AddDbContext<AppDbContext>();
             builder.Services.AddIdentityCore<AppUser>()
              .AddEntityFrameworkStores<AppDbContext>()
              .AddDefaultTokenProviders();
@@ -62,7 +61,7 @@ namespace EventAPI
             {
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
-                    Description = "JWT Authorization header using the Bearerscheme.Example: \"Authorization: Bearer {token}\"",
+                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
                     Name = "Authorization",
                     In = ParameterLocation.Header,
                     Type = SecuritySchemeType.Http,

@@ -1,10 +1,14 @@
 ﻿using EventAPI.Authentication;
+using EventAPI.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace EventAPI.Controllers
 {
@@ -12,17 +16,72 @@ namespace EventAPI.Controllers
     [Route("[controller]")]
     public class AccountController(UserManager<AppUser> userManager, IConfiguration configuration) : ControllerBase
     {
+
+        [Authorize]
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<UserDTO>>> GetAllUsers()
+        {
+            var users = await userManager.Users
+                .Select(u => new UserDTO
+                {
+                    Id = u.Id,
+                    UserName = u.UserName,
+                    Email = u.Email
+                })
+                .ToListAsync();
+
+            return Ok(users);
+        }
+
+        [Authorize]
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserDTO>> GetUserById(string id)
+        {
+            var user = await userManager.Users
+                .Include(u => u.Events) // Eager load Events
+                .Where(u => u.Id == id)
+                .Select(u => new UserDTO
+                {
+                    Id = u.Id,
+                    UserName = u.UserName,
+                    Email = u.Email,
+                    Events = u.Events.Select(e => new EventDTO
+                    {
+                        Id = e.Id,
+                        Title = e.Title,
+                        Description = e.Description,
+                        StartTime = e.StartTime,
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                return NotFound($"User with ID '{id}' not found.");
+            }
+
+            return Ok(user);
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] AddOrUpdateAppUserModel model)
         {
             // Check if the model is valid
             if (ModelState.IsValid)
             {
+                // Check if username is taken
                 var existedUser = await userManager.
                 FindByNameAsync(model.UserName);
                 if (existedUser != null)
                 {
                     ModelState.AddModelError("", "User name is already taken");
+                    return BadRequest(ModelState);
+                }
+                // Check if email is taken
+                var existedUserByEmail = await userManager.FindByEmailAsync(model.Email);
+                if (existedUserByEmail != null)
+                {
+                    ModelState.AddModelError("Email", "Email is already registered");
                     return BadRequest(ModelState);
                 }
                 // Create a new user object
