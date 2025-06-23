@@ -85,12 +85,14 @@ Using Visual Studio:
 
 | Method | Endpoint        | Auth Required | Description           |
 |--------|-----------------|----------------|-----------------------|
-| POST   | `/register`     | ❌             | Register a new user   |
-| POST   | `/login`        | ❌             | Login and get JWT     |
-| GET    | `/events`       | ✅             | Get all events        |
-| POST   | `/events`       | ✅             | Create a new event    |
-| PUT    | `/events/{id}`  | ✅             | Update an event       |
-| DELETE | `/events/{id}`  | ✅             | Delete an event       |
+| POST   | `/Account/register`     | ❌             | Register a new user   |
+| POST   | `/Account/login`        | ❌             | Login and get JWT     |
+| GET    | `/Account/{id}`         | ✅             | Get a user            |
+| GET    | `/Account/all`          | ✅             | Get all users         |
+| GET    | `/events`               | ✅             | Get all events        |
+| POST   | `/events`               | ✅             | Create a new event    |
+| PUT    | `/events/{id}`          | ✅             | Update an event       |
+| DELETE | `/events/{id}`          | ✅             | Delete an event       |
 
 ---
 
